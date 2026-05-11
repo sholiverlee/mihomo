@@ -145,6 +145,11 @@ linux-loong64:
 android-arm64:
 	GOARCH=arm64 GOOS=android $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
+android-arm64-wahoo-slim:
+	GOARCH=arm64 GOOS=android CGO_ENABLED=0 go build -tags 'with_gvisor with_low_memory no_fake_tcp wahoo_slim' -trimpath -ldflags '-X "github.com/metacubex/mihomo/constant.Version=$(VERSION)" \
+		-X "github.com/metacubex/mihomo/constant.BuildTime=$(BUILDTIME)" \
+		-w -s -buildid=' -o $(BINDIR)/$(NAME)-$@ .
+
 freebsd-386:
 	GOARCH=386 GOOS=freebsd $(GOBUILD) -o $(BINDIR)/$(NAME)-$@
 
@@ -203,4 +208,3 @@ clean:
 
 CLANG ?= clang-14
 CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
-
