@@ -4,8 +4,8 @@
 only the protocol surface the native Android client is expected to consume:
 
 - outbound: `vless`, `direct`, `dns`, `reject`
-- inbound/listener: `tun`
-- VLESS transport: `xhttp` only
+- inbound/listener: local `socks`/`mixed` and `tun`
+- VLESS transport: `xhttp`, `tcp` with Reality
 - VLESS security: Reality through `reality-opts`
 
 Unsupported in this profile: VMess, Shadowsocks, Trojan, Hysteria, TUIC,

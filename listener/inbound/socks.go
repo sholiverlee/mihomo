@@ -1,5 +1,3 @@
-//go:build !wahoo_slim
-
 package inbound
 
 import (

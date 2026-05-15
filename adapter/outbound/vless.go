@@ -173,8 +173,16 @@ type XHTTPDownloadSettings struct {
 }
 
 func (v *Vless) StreamConnContext(ctx context.Context, c net.Conn, metadata *C.Metadata) (_ net.Conn, err error) {
-	if v.option.Network != "xhttp" {
-		return nil, fmt.Errorf("wahoo_slim VLESS supports xhttp network only")
+	switch v.option.Network {
+	case "xhttp":
+		break // already handled by xhttpClient.Dial
+	case "tcp":
+		c, err = v.streamTLSConn(ctx, c, false)
+	default:
+		return nil, fmt.Errorf("wahoo_slim VLESS supports xhttp and tcp reality only")
+	}
+	if err != nil {
+		return nil, err
 	}
 	return v.streamConnContext(ctx, c, metadata)
 }
@@ -229,10 +237,14 @@ func (v *Vless) streamTLSConn(ctx context.Context, conn net.Conn, isH2 bool) (ne
 }
 
 func (v *Vless) dialContext(ctx context.Context) (net.Conn, error) {
-	if v.option.Network != "xhttp" {
-		return nil, fmt.Errorf("wahoo_slim VLESS supports xhttp network only")
+	switch v.option.Network {
+	case "xhttp":
+		return v.xhttpClient.Dial()
+	case "tcp":
+		return v.dialer.DialContext(ctx, "tcp", v.addr)
+	default:
+		return nil, fmt.Errorf("wahoo_slim VLESS supports xhttp and tcp reality only")
 	}
-	return v.xhttpClient.Dial()
 }
 
 func (v *Vless) DialContext(ctx context.Context, metadata *C.Metadata) (_ C.Conn, err error) {
@@ -304,17 +316,19 @@ func parseVlessAddr(metadata *C.Metadata, xudp bool) *vless.DstAddr {
 }
 
 func NewVless(option VlessOption) (*Vless, error) {
-	if option.Network != "xhttp" {
-		return nil, fmt.Errorf("wahoo_slim VLESS supports xhttp network only")
+	if option.Network != "xhttp" && option.Network != "tcp" {
+		return nil, fmt.Errorf("wahoo_slim VLESS supports xhttp and tcp reality only")
 	}
 	if option.ECHOpts.Enable {
 		return nil, fmt.Errorf("wahoo_slim VLESS does not support ECH")
 	}
-	if option.XHTTPOpts.DownloadSettings != nil {
-		return nil, fmt.Errorf("wahoo_slim VLESS xhttp does not support download-settings")
-	}
-	if len(option.ALPN) == 1 && option.ALPN[0] == "h3" {
-		return nil, fmt.Errorf("wahoo_slim VLESS xhttp does not support HTTP/3")
+	if option.Network == "xhttp" {
+		if option.XHTTPOpts.DownloadSettings != nil {
+			return nil, fmt.Errorf("wahoo_slim VLESS xhttp does not support download-settings")
+		}
+		if len(option.ALPN) == 1 && option.ALPN[0] == "h3" {
+			return nil, fmt.Errorf("wahoo_slim VLESS xhttp does not support HTTP/3")
+		}
 	}
 
 	var addons *vless.Addons
@@ -364,6 +378,12 @@ func NewVless(option VlessOption) (*Vless, error) {
 	v.realityConfig, err = v.option.RealityOpts.Parse()
 	if err != nil {
 		return nil, err
+	}
+	if option.Network == "tcp" {
+		if !option.TLS || v.realityConfig == nil {
+			return nil, fmt.Errorf("wahoo_slim VLESS tcp requires reality")
+		}
+		return v, nil
 	}
 
 	requestHost := v.option.XHTTPOpts.Host

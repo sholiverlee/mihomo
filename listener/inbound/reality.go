@@ -1,5 +1,3 @@
-//go:build !wahoo_slim
-
 package inbound
 
 import "github.com/metacubex/mihomo/listener/reality"

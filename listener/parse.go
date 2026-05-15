@@ -22,6 +22,20 @@ func ParseListener(mapping map[string]any) (C.InboundListener, error) {
 		err      error
 	)
 	switch proxyType {
+	case "socks":
+		socksOption := &IN.SocksOption{UDP: true}
+		err = decoder.Decode(mapping, socksOption)
+		if err != nil {
+			return nil, err
+		}
+		listener, err = IN.NewSocks(socksOption)
+	case "mixed":
+		mixedOption := &IN.MixedOption{UDP: true}
+		err = decoder.Decode(mapping, mixedOption)
+		if err != nil {
+			return nil, err
+		}
+		listener, err = IN.NewMixed(mixedOption)
 	case "tun":
 		tunOption := &IN.TunOption{
 			Stack:     C.TunGvisor,
