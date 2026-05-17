@@ -275,7 +275,7 @@ type RawTun struct {
 	MTU        uint32 `yaml:"mtu" json:"mtu,omitempty"`
 	GSO        bool   `yaml:"gso" json:"gso,omitempty"`
 	GSOMaxSize uint32 `yaml:"gso-max-size" json:"gso-max-size,omitempty"`
-	//Inet4Address           []netip.Prefix `yaml:"inet4-address" json:"inet4-address,omitempty"`
+	Inet4Address                          []netip.Prefix `yaml:"inet4-address" json:"inet4-address,omitempty"`
 	Inet6Address                          []netip.Prefix `yaml:"inet6-address" json:"inet6-address,omitempty"`
 	IPRoute2TableIndex                    int            `yaml:"iproute2-table-index" json:"iproute2-table-index,omitempty"`
 	IPRoute2RuleIndex                     int            `yaml:"iproute2-rule-index" json:"iproute2-rule-index,omitempty"`
@@ -1638,11 +1638,14 @@ func parseIPV6(rawCfg *RawConfig) {
 }
 
 func parseTun(rawTun RawTun, dns *DNS, general *General) error {
-	tunAddressPrefix := dns.FakeIPRange
-	if !tunAddressPrefix.IsValid() {
-		tunAddressPrefix = netip.MustParsePrefix("198.18.0.1/16")
+	tunAddress := rawTun.Inet4Address
+	if len(tunAddress) == 0 {
+		tunAddressPrefix := dns.FakeIPRange
+		if !tunAddressPrefix.IsValid() {
+			tunAddressPrefix = netip.MustParsePrefix("198.18.0.1/16")
+		}
+		tunAddress = []netip.Prefix{netip.PrefixFrom(tunAddressPrefix.Addr(), 30)}
 	}
-	tunAddressPrefix = netip.PrefixFrom(tunAddressPrefix.Addr(), 30)
 
 	general.Tun = LC.Tun{
 		Enable:              rawTun.Enable,
@@ -1655,7 +1658,7 @@ func parseTun(rawTun RawTun, dns *DNS, general *General) error {
 		MTU:                                   rawTun.MTU,
 		GSO:                                   rawTun.GSO,
 		GSOMaxSize:                            rawTun.GSOMaxSize,
-		Inet4Address:                          []netip.Prefix{tunAddressPrefix},
+		Inet4Address:                          tunAddress,
 		Inet6Address:                          rawTun.Inet6Address,
 		IPRoute2TableIndex:                    rawTun.IPRoute2TableIndex,
 		IPRoute2RuleIndex:                     rawTun.IPRoute2RuleIndex,
